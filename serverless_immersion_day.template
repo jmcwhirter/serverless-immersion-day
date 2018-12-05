@@ -1,0 +1,84 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation Template to create resources necessary for serverless immersion days. This template will create resources that can set up IAM users and then destroy all resources created during the labs.",
+    "Resources": {
+        "ImmersionDayCleanupRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/AmazonEC2FullAccess",
+                    "arn:aws:iam::aws:policy/AWSLambdaFullAccess",
+                    "arn:aws:iam::aws:policy/IAMFullAccess",
+                    "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+                    "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess",
+                    "arn:aws:iam::aws:policy/AmazonKinesisFullAccess",
+                    "arn:aws:iam::aws:policy/AmazonAPIGatewayAdministrator",
+                    "arn:aws:iam::aws:policy/AmazonCognitoPowerUser",
+                    "arn:aws:iam::aws:policy/AmazonKinesisAnalyticsFullAccess"
+                ],
+                "MaxSessionDuration": 3600,
+                "Path": "/service-role/",
+                "Policies": [
+                    {
+                        "PolicyDocument" : {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Sid": "VisualEditor0",
+                                    "Effect": "Allow",
+                                    "Action": "cloudformation:DeleteStack",
+                                    "Resource": "arn:aws:cloudformation:*:*:stack/*/*"
+                                },
+                                {
+                                    "Sid": "VisualEditor1",
+                                    "Effect": "Allow",
+                                    "Action": "cloudformation:ListStacks",
+                                    "Resource": "*"
+                                }
+                            ]
+                        },
+                        "PolicyName" : "CloudFormationLimitedAccess"
+                    }
+                ]
+            }
+        },
+        "CleanUpLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": {
+                    "S3Bucket": "serverless-immersion-day",
+                    "S3Key": "cleanup-lambda.zip"
+                },
+                "Description": "",
+                "FunctionName": "ImmersionDayCleanUp",
+                "Handler": "lambda_function.lambda_handler",
+                "MemorySize": 128,
+                "Role": { "Fn::GetAtt" : ["ImmersionDayCleanupRole", "Arn"] },
+                "Runtime": "python3.6",
+                "Timeout": 300,
+                "TracingConfig": {
+                    "Mode": "PassThrough"
+                },
+                "Tags": [{
+                    "Key" : "protected",
+                    "Value" : "true"
+                }]
+            },
+            "DependsOn": [
+                "ImmersionDayCleanupRole"
+            ]
+        }
+    }
+}
